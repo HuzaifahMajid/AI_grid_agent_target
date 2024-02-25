@@ -30,7 +30,6 @@ def isValidCol(x):
 def generateMazes():
 
 	#Generate the 50 mazes 
-	##########################################################
 	# initializing maze for 3D array implementation
 	maze = np.zeros((mazesNumber,num_rows,num_cols))
 
@@ -40,20 +39,19 @@ def generateMazes():
 		visited = set()  # Set for visitied nodes 
 		stack   = []     # Stack is empty at first 
 
-		##########################################################
+		
 		#start from a random cell	
 		row_index = random.randint(0,num_rows-1)#Must choose valid row index 
 		col_index = random.randint(0,num_cols-1)#Must choose valid col index 
 		#mark it as visitied 	
-		print("_______________ Start ________________\n")
+		print("- Start -\n")
 		print("Loc["+str(row_index)+"],["+str(col_index)+"] = 1")
 		visited.add((row_index , col_index))       #Visited 
 		maze [mazeInd , row_index , col_index] = 1 #Unblocked 
 		
 
-		##########################################################
-		#Select a random neighbouring cell to visit that has not yet been visited. 
-		print("\n\n_______________ DFS ________________\n")
+		#Select random neighbouring cell to visit if not yet been visited. 
+		print("\n\n-  DFS -\n")
 		while(len(visited) < num_cols*num_rows): #Repeat till visit all cells 
 		
 			crnt_row_index = row_index+random.randint(-1,1)#neighbor
@@ -61,7 +59,6 @@ def generateMazes():
 			i=0
 			isDead=False
 			while ((not isValidRow(crnt_row_index)) or (not isValidCol(crnt_col_index) )or ((crnt_row_index,crnt_col_index) in visited) ):
-				# no need to write also "or (crnt_row_index==row_index and crnt_col_index==col_index)" as if this happened then it would be visited 
 				crnt_row_index = row_index+random.randint(-1,1)
 				crnt_col_index = col_index+random.randint(-1,1)
 				i = i+1
@@ -117,7 +114,7 @@ def generateMazes():
 					row_index = unvisitRow
 					col_index = unvisitCol
 
-				
+		print("maze succesfully generated")		
 	return maze
 		
 if __name__ == '__main__':

@@ -221,371 +221,463 @@ def update_graph(image, f, oLine, pLine, map, aList, bList):
     plt.pause(1)
     f.canvas.draw()
 
-def adaptedAStar(mLength,bList, start, goal, show = False):
-	# Here we implement Adaptive A* which will take the length, start, and goal as inputs
-	maximumG = mLength * mLength
-	currCell = start 
-	gCell = goal
-	map_array = np.zeros((5,mLength, mLength))
-	map_array[3] = np.zeros((mLength,mLength), dtype = bool)
-	map_array[4] = np.zeros((mLength,mLength), dtype = bool)
-	map_array[2][currCell] = 1
-	maxG = 0 
-	totalSteps = 0 
-	totalExpense = 0 
-	currTrack = [start]
-	update_status(map_array,mLength,currCell,bList)
-	while currCell != gCell:
-		totalSteps += 1 
-		map_array[1][currCell] = 0
-		map_array[0][currCell] = totalSteps
-		map_array[1][gCell] = np.inf
-		map_array[0][gCell] = totalSteps
-		oList = []
-		oDict = dict()
-		fDict = dict()
-		map_array[4] = np.zeros((mLength,mLength), dtype = bool)
-		bh.add(oList, oDict, DistanceDiff(currCell,gCell), currCell)
-		while oList and map_array[1][gCell] > oList[0]:
-			coloredCell = bh.pop(oList, oDict)
-			map_array[4][coloredCell] = True
-			totalExpense += 1
-			for newCell in nextNeighbor(coloredCell,mLength):
-				if map_array[2][newCell] != 2 :
-					if map_array[3][newCell]:
-						newHeuris = maxG - map_array[1][newCell]
-					else:
-						newHeuris = DistanceDiff(newCell,gCell)
-					if map_array[0][newCell] < totalSteps:
-						map_array[1][newCell] = np.inf
-						map_array[0][newCell] = totalSteps
-					if map_array[1][newCell] > map_array[1][coloredCell] + 1:
-						fDict[newCell] = coloredCell
-						newG = map_array[1][coloredCell] + 1
-						bh.add(oList, oDict, (maximumG*( newG +  newHeuris) -  newG) , newCell )
-						map_array[1][newCell] = newG
-		map_array[3] = map_array[4]
-		maxG = map_array[1][gCell]
-		if not oList:
-			return None, None
-		currPath = getForwardPath(fDict,currCell,gCell)
-		if show:
-			if currCell == start:
-				plt.ion()
-				im, fig,oLine,pLine = color_maze(mLength, map = map_array, pList = currPath , old = currTrack)
-				plt.show()
-			else:
-				update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-		for cell in currPath:
-			if cell == currCell:
-				continue
-			else:
-				if map_array[2][cell] != 2 :
-					currTrack.append(cell)
-					currCell = cell
-					update_status( map_array,mLength,currCell,bList)
-				else:
-					break 
-	if show:
-		update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-	return currTrack,totalExpense
+def adaptedAStar(mLength, bList, start, goal, show=False):
+    # Implement Adaptive A* algorithm which takes length, start, and goal as inputs
+    maximumG = mLength * mLength  # Maximum possible g-value
+    currCell = start
+    gCell = goal
+    map_array = np.zeros((5, mLength, mLength))  # Map data structure with layers for various information
+    map_array[3] = np.zeros((mLength, mLength), dtype=bool)  # Layer for tracking colored cells
+    map_array[4] = np.zeros((mLength, mLength), dtype=bool)  # Temporary layer for updating colored cells
+    map_array[2][currCell] = 1  # Mark the start cell as visited
+    maxG = 0
+    totalSteps = 0
+    totalExpense = 0
+    currTrack = [start]  # Track of the current path
+    update_status(map_array, mLength, currCell, bList)  # Update map with obstacle information
 
-def backwardAStarTie(mLength,bList, start, goal, show = False):
-	# Here we implement Backward A* which will take the length, start, and goal as inputs
-	totalExpense = 0 
-	maxG = mLength*mLength
-	currCell = start 
-	gCell = goal
-	map_array = np.zeros((4,mLength, mLength))
-	map_array[2][currCell] = 1
-	totalSteps = 0 
-	currTrack = [start]
-	update_status(map_array,mLength,currCell,bList)
-	while currCell != gCell:
-		map_array[3] = np.zeros((mLength,mLength))
-		totalSteps += 1 
-		map_array[1][currCell] = np.inf
-		map_array[0][currCell] = totalSteps
-		map_array[1][gCell] = 0
-		map_array[0][gCell] = totalSteps
-		oList = []
-		oDict = dict()
-		fDict = dict()
-		bh.add(oList, oDict, DistanceDiff(currCell,gCell), gCell)
-		while oList and map_array[1][currCell] > oList[0]:
-			coloredCell = bh.pop(oList, oDict)
-			map_array[3][coloredCell] = 1
-			totalExpense += 1
-			for newCell in nextNeighbor(coloredCell,mLength):
-				if map_array[2][newCell] != 2 :
-					if map_array[0][newCell] < totalSteps:
-						map_array[1][newCell] = np.inf
-						map_array[0][newCell] = totalSteps
-					if map_array[1][newCell] > map_array[1][coloredCell] + 1:
-						map_array[1][newCell] = map_array[1][coloredCell] + 1
-						fDict[newCell] = coloredCell
-						bh.add(oList, oDict, maxG*(map_array[1][newCell] + DistanceDiff(newCell,currCell)) - map_array[1][newCell] , newCell )
-		if not oList:
-			return None, None
-		
-		if show:
-			currPath = getBackwardPath(fDict,currCell,gCell)
-			if currCell == start:
-				plt.ion()
-				im, fig,oLine,pLine = color_maze(mLength, map = map_array, pList = currPath , old = currTrack)
-				plt.show()
-			else:
-				update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-		while currCell != gCell:
-			cell = fDict[currCell]
-			if map_array[2][cell] != 2 :
-				currTrack.append(cell)
-				currCell = cell
-				update_status( map_array,mLength,currCell,bList)
-			else:
-				break
-	if show:
-		update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath) 
-	return currTrack, totalExpense
+    # Main loop of the Adaptive A* algorithm
+    while currCell != gCell:
+        totalSteps += 1
+        map_array[1][currCell] = 0  # Set the g-value of the current cell to zero
+        map_array[0][currCell] = totalSteps  # Update the total steps taken to reach the current cell
+        map_array[1][gCell] = np.inf  # Set the g-value of the goal cell to infinity
+        map_array[0][gCell] = totalSteps  # Update the total steps taken to reach the goal
+        oList = []  # Open list for priority queue
+        oDict = dict()  # Dictionary for efficient element retrieval from the open list
+        fDict = dict()  # Dictionary to track the parent cells for constructing the path
+        map_array[4] = np.zeros((mLength, mLength), dtype=bool)  # Reset the temporary colored cells
+        bh.add(oList, oDict, DistanceDiff(currCell, gCell), currCell)  # Add the start cell to the open list
 
-def forwardAStarTie(mLength,bList, start, goal, show = False):
-	# Here we implement Forward A* which will take the length, start, and goal as inputs
-	totalExpense = 0
-	maxG = mLength* mLength
-	currCell = start 
-	gCell = goal
-	map_array = np.zeros((4,mLength, mLength))
-	map_array[2][currCell] = 1
-	totalSteps = 0 
-	currTrack = [start]
-	update_status(map_array,mLength,currCell,bList)
-	while currCell != gCell:
-		totalSteps += 1 
-		map_array[1][currCell] = 0
-		map_array[0][currCell] = totalSteps
-		map_array[1][gCell] = np.inf
-		map_array[0][gCell] = totalSteps
-		oList = []
-		oDict = dict()
-		fDict = dict()
-		bh.add(oList, oDict, DistanceDiff(currCell,gCell), currCell)
-		while oList and map_array[1][gCell] > oList[0]:
-			coloredCell = bh.pop(oList, oDict)
-			map_array[3][coloredCell] = 1
-			totalExpense += 1
-			for newCell in nextNeighbor(coloredCell,mLength):
-				if  map_array[2][newCell] != 2 :
-					if map_array[0][newCell] < totalSteps:
-						map_array[1][newCell] = np.inf
-						map_array[0][newCell] = totalSteps
-					if map_array[1][newCell] > map_array[1][coloredCell] + 1:
-						map_array[1][newCell] = map_array[1][coloredCell] + 1
-						fDict[newCell] = coloredCell
-						bh.add (oList, oDict, ( maxG*(map_array[1][newCell] + DistanceDiff(newCell,gCell)) - map_array[1][newCell] )  , newCell ) 
-		if not oList:
-			return None, None
-		currPath = getForwardPath(fDict,currCell,gCell)
-		if show:
-			if currCell == start:
-				plt.ion()
-				im, fig,oLine,pLine = color_maze(mLength, map = map_array, pList = currPath , old = currTrack)
-				plt.show()
-			else:
-				update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-		for cell in currPath:
-			if cell == currCell:
-				continue
-			else:
-				if map_array[2][cell] != 2 :
-					currTrack.append(cell)
-					currCell = cell
-					update_status( map_array,mLength,currCell,bList)
-				else:
-					break 
-	if show:
-		update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-	return currTrack, totalExpense
+        # Explore cells using A* algorithm
+        while oList and map_array[1][gCell] > oList[0]:
+            coloredCell = bh.pop(oList, oDict)  # Get the cell with the minimum g-value from the open list
+            map_array[4][coloredCell] = True  # Mark the cell as temporarily colored (visited)
+            totalExpense += 1
 
-def repeatedForwardAStar(mLength,bList, start, goal, show = False):
-	# Here we implement Repeated Forward A* which will take the length, start, and goal as inputs
-	totalExpense = 0
-	maxG = mLength* mLength
-	currCell = start 
-	gCell = goal
-	map_array = np.zeros((4,mLength, mLength))
-	map_array[2][currCell] = 1
-	totalSteps = 0 
-	currTrack = [start]
-	update_status(map_array,mLength,currCell,bList)
-	while currCell != gCell:
-		totalSteps += 1 
-		map_array[1][currCell] = 0
-		map_array[0][currCell] = totalSteps
-		map_array[1][gCell] = np.inf
-		map_array[0][gCell] = totalSteps
-		oList = []
-		oDict = dict()
-		fDict = dict()
-		bh.add(oList, oDict, DistanceDiff(currCell,gCell), currCell)
-		while oList and map_array[1][gCell] > oList[0]:
-			coloredCell = bh.pop(oList, oDict)
-			totalExpense += 1
-			for newCell in nextNeighbor(coloredCell,mLength):
-				if  map_array[2][newCell] != 2 :
-					if map_array[0][newCell] < totalSteps:
-						map_array[1][newCell] = np.inf
-						map_array[0][newCell] = totalSteps
-					if map_array[1][newCell] > map_array[1][coloredCell] + 1:
-						map_array[1][newCell] = map_array[1][coloredCell] + 1
-						fDict[newCell] = coloredCell
-						bh.add (oList, oDict, ( maxG*(map_array[1][newCell] + DistanceDiff(newCell,gCell)) + map_array[1][newCell] )  , newCell ) 
-		if not oList:
-			return None, None
-		currPath = getForwardPath(fDict,currCell,gCell)
-		if show:
-			if currCell == start:
-				plt.ion()
-				im, fig,oLine,pLine = color_maze(mLength, map = map_array, pList = currPath , old = currTrack)
-				plt.show()
-			else:
-				update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-		for cell in currPath:
-			if cell == currCell:
-				continue
-			else:
-				if map_array[2][cell] != 2 :
-					currTrack.append(cell)
-					currCell = cell
-					update_status( map_array,mLength,currCell,bList)
-				else:
-					break 
-	if show:
-		update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-	return currTrack, totalExpense
+            # Explore neighboring cells
+            for newCell in nextNeighbor(coloredCell, mLength):
+                if map_array[2][newCell] != 2:
+                    if map_array[3][newCell]:
+                        newHeuris = maxG - map_array[1][newCell]
+                    else:
+                        newHeuris = DistanceDiff(newCell, gCell)
+                    if map_array[0][newCell] < totalSteps:
+                        map_array[1][newCell] = np.inf
+                        map_array[0][newCell] = totalSteps
 
-def repeatedForwardAStarB(mLength,bList, start, goal, show = False):
-	# Here we implement Repeated Forward A* which will take the length, start, and goal as inputs
-	totalExpense = 0
-	currCell = start 
-	gCell = goal
-	map_array = np.zeros((3,mLength, mLength))
-	map_array[2][currCell] = 1
-	totalSteps = 0 
-	currTrack = [start]
-	update_status(map_array,mLength,currCell,bList)
-	while currCell != gCell:
-		totalSteps += 1 
-		map_array[1][currCell] = 0
-		map_array[0][currCell] = totalSteps
-		map_array[1][gCell] = np.inf
-		map_array[0][gCell] = totalSteps
-		oList = []
-		oDict = dict()
-		fDict = dict()
-		bh.add(oList, oDict, DistanceDiff(currCell,gCell), currCell)
-		while len(oList)>0 and map_array[1][gCell] > oList[0]:
-			coloredCell = bh.pop(oList, oDict)
-			totalExpense +=1
-			for newCell in nextNeighbor(coloredCell,mLength):
-				if  map_array[2][newCell] != 2 :
-					if map_array[0][newCell] < totalSteps:
-						map_array[1][newCell] = np.inf
-						map_array[0][newCell] = totalSteps
-					if map_array[1][newCell] > map_array[1][coloredCell] + 1:
-						map_array[1][newCell] = map_array[1][coloredCell] + 1
-						fDict[newCell] = coloredCell
-						bh.add(oList, oDict, (map_array[1][newCell] + DistanceDiff(newCell,gCell)) , newCell )
-		if not oList:
-			return None, None
-		currPath = getForwardPath(fDict,currCell,gCell)
-		if show:
-			
-			if currCell == start:
-				plt.ion()
-				im, fig,oLine,pLine = color_maze(mLength, map = map_array, pList = currPath , old = currTrack)
-				plt.show()
-			else:
-				update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-		for cell in currPath:
-			if cell == currCell:
-				continue
-			else:
-				if map_array[2][cell] != 2 :
-					currTrack.append(cell)
-					currCell = cell
-					update_status( map_array,mLength,currCell,bList)
-				else:
-					break 
-	if show:
-		update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-	return currTrack,totalExpense
+                    if map_array[1][newCell] > map_array[1][coloredCell] + 1:
+                        fDict[newCell] = coloredCell
+                        newG = map_array[1][coloredCell] + 1
+                        bh.add(oList, oDict, (maximumG * (newG + newHeuris) - newG), newCell)
+                        map_array[1][newCell] = newG
 
-def repeatedBackwardAStar(mLength,bList, start, goal, show = False):
-	# Here we implement Repeated Backward A* which will take the length, start, and goal as inputs
-	totalExpense = 0
-	currCell = start 
-	gCell = goal
-	map_array = np.zeros((3,mLength, mLength))
-	map_array[2][currCell] = 1
-	totalSteps = 0 
-	currTrack = [start]
-	update_status(map_array,mLength,currCell,bList)
-	while currCell != gCell:
-		totalSteps += 1 
-		map_array[1][currCell] = np.inf
-		print("map_array")
-		print(map_array [1,1,2])
-		print("currCell")
-		print( currCell )
-		
-		
-		map_array[0][currCell] = totalSteps
-		map_array[1][gCell] = 0
-		map_array[0][gCell] = totalSteps
-		oList = []
-		oDict = dict()
-		fDict = dict()
-		bh.add(oList, oDict, DistanceDiff(currCell,gCell), gCell)
-		print("olist")
-		print(oList)
-		while oList :
-			print(map_array[1][currCell])
-			
-			if(map_array[1][currCell] <= oList[0]):
-				break 
-			totalExpense += 1
-			coloredCell = bh.pop(oList, oDict)
-			for newCell in nextNeighbor(coloredCell,mLength):
-				if map_array[2][newCell] != 2 :
-					if map_array[0][newCell] < totalSteps:
-						map_array[1][newCell] = np.inf
-						map_array[0][newCell] = totalSteps
-					if map_array[1][newCell] > map_array[1][coloredCell] + 1:
-						map_array[1][newCell] = map_array[1][coloredCell] + 1
-						fDict[newCell] = coloredCell
-						bh.add(oList, oDict,map_array[1][newCell] + DistanceDiff(newCell,currCell), newCell )
-		if not oList:
-			return None, None
-		
-		if show:
-			currPath = getBackwardPath(fDict,currCell,gCell)
-			if currCell == start:
-				plt.ion()
-				im, fig,oLine,pLine = color_maze(mLength, map = map_array, pList = currPath , old = currTrack)
-				plt.show()
-			else:
-				update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-		while currCell != gCell:
-			cell = fDict[currCell]
-			if map_array[2][cell] != 2 :
-				currTrack.append(cell)
-				currCell = cell
-				update_status( map_array,mLength,currCell,bList)
-			else:
-				break 
-	if show:
-		update_graph(im, fig, oLine,pLine, map_array[2],  currTrack ,currPath)
-	return currTrack, totalExpense
+        map_array[3] = map_array[4]  # Update the colored cells
+        maxG = map_array[1][gCell]
+
+        if not oList:
+            return None, None
+
+        # Show visualization if specified
+        currPath = getForwardPath(fDict, currCell, gCell)
+        if show:
+            if currCell == start:
+                plt.ion()
+                im, fig, oLine, pLine = color_maze(mLength, map=map_array, pList=currPath, old=currTrack)
+                plt.show()
+            else:
+                update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+        # Update the current track with the new path
+        for cell in currPath:
+            if cell == currCell:
+                continue
+            else:
+                if map_array[2][cell] != 2:
+                    currTrack.append(cell)
+                    currCell = cell
+                    update_status(map_array, mLength, currCell, bList)
+                else:
+                    break
+
+    # Show final visualization if specified
+    if show:
+        update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+    # Return the final path and total expense
+    return currTrack, totalExpense
+
+def backwardAStarTie(mLength, bList, start, goal, show=False):
+    # Implement Backward A* with tie-breaking, taking length, start, and goal as inputs
+    totalExpense = 0
+    maxG = mLength * mLength  # Maximum possible g-value
+    currCell = start
+    gCell = goal
+    map_array = np.zeros((4, mLength, mLength))  # Map data structure with layers for various information
+    map_array[2][currCell] = 1  # Mark the current cell as visited
+    totalSteps = 0
+    currTrack = [start]  # Track of the current path
+    update_status(map_array, mLength, currCell, bList)  # Update map with obstacle information
+
+    # Main loop of the Backward A* with tie-breaking algorithm
+    while currCell != gCell:
+        map_array[3] = np.zeros((mLength, mLength))  # Reset the colored cells
+        totalSteps += 1
+        map_array[1][currCell] = np.inf  # Set the g-value of the current cell to infinity
+        map_array[0][currCell] = totalSteps  # Update the total steps taken to reach the current cell
+        map_array[1][gCell] = 0  # Set the g-value of the goal cell to zero
+        map_array[0][gCell] = totalSteps  # Update the total steps taken to reach the goal
+        oList = []  # Open list for priority queue
+        oDict = dict()  # Dictionary for efficient element retrieval from the open list
+        fDict = dict()  # Dictionary to track the parent cells for constructing the path
+        bh.add(oList, oDict, DistanceDiff(currCell, gCell), gCell)  # Add the goal cell to the open list
+
+        # Explore cells using A* algorithm with tie-breaking
+        while oList and map_array[1][currCell] > oList[0]:
+            coloredCell = bh.pop(oList, oDict)  # Get the cell with the minimum g-value from the open list
+            map_array[3][coloredCell] = 1  # Mark the cell as colored (visited)
+            totalExpense += 1
+
+            # Explore neighboring cells
+            for newCell in nextNeighbor(coloredCell, mLength):
+                if map_array[2][newCell] != 2:
+                    if map_array[0][newCell] < totalSteps:
+                        map_array[1][newCell] = np.inf
+                        map_array[0][newCell] = totalSteps
+
+                    if map_array[1][newCell] > map_array[1][coloredCell] + 1:
+                        map_array[1][newCell] = map_array[1][coloredCell] + 1
+                        fDict[newCell] = coloredCell
+                        bh.add(oList, oDict, maxG * (map_array[1][newCell] + DistanceDiff(newCell, currCell))
+                               - map_array[1][newCell], newCell)
+
+        if not oList:
+            return None, None
+
+        # Show visualization if specified
+        currPath = getBackwardPath(fDict, currCell, gCell)
+        if show:
+            if currCell == start:
+                plt.ion()
+                im, fig, oLine, pLine = color_maze(mLength, map=map_array, pList=currPath, old=currTrack)
+                plt.show()
+            else:
+                update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+        # Update the current track with the new path
+        while currCell != gCell:
+            cell = fDict[currCell]
+            if map_array[2][cell] != 2:
+                currTrack.append(cell)
+                currCell = cell
+                update_status(map_array, mLength, currCell, bList)
+            else:
+                break
+
+    # Show final visualization if specified
+    if show:
+        update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+    # Return the final path and total expense
+    return currTrack, totalExpense
+
+
+def forwardAStarTie(mLength, bList, start, goal, show=False):
+    # Implement Forward A* with tie-breaking, taking length, start, and goal as inputs
+    totalExpense = 0
+    maxG = mLength * mLength  # Maximum possible g-value
+    currCell = start
+    gCell = goal
+    map_array = np.zeros((4, mLength, mLength))  # Map data structure with layers for various information
+    map_array[2][currCell] = 1  # Mark the current cell as visited
+    totalSteps = 0
+    currTrack = [start]  # Track of the current path
+    update_status(map_array, mLength, currCell, bList)  # Update map with obstacle information
+
+    # Main loop of the Forward A* with tie-breaking algorithm
+    while currCell != gCell:
+        totalSteps += 1
+        map_array[1][currCell] = 0  # Set the g-value of the current cell to zero
+        map_array[0][currCell] = totalSteps  # Update the total steps taken to reach the current cell
+        map_array[1][gCell] = np.inf  # Set the g-value of the goal cell to infinity
+        map_array[0][gCell] = totalSteps  # Update the total steps taken to reach the goal
+        oList = []  # Open list for priority queue
+        oDict = dict()  # Dictionary for efficient element retrieval from the open list
+        fDict = dict()  # Dictionary to track the parent cells for constructing the path
+        bh.add(oList, oDict, DistanceDiff(currCell, gCell), currCell)  # Add the start cell to the open list
+
+        # Explore cells using A* algorithm with tie-breaking
+        while oList and map_array[1][gCell] > oList[0]:
+            coloredCell = bh.pop(oList, oDict)  # Get the cell with the minimum g-value from the open list
+            map_array[3][coloredCell] = 1  # Mark the cell as colored (visited)
+            totalExpense += 1
+
+            # Explore neighboring cells
+            for newCell in nextNeighbor(coloredCell, mLength):
+                if map_array[2][newCell] != 2:
+                    if map_array[0][newCell] < totalSteps:
+                        map_array[1][newCell] = np.inf
+                        map_array[0][newCell] = totalSteps
+
+                    if map_array[1][newCell] > map_array[1][coloredCell] + 1:
+                        map_array[1][newCell] = map_array[1][coloredCell] + 1
+                        fDict[newCell] = coloredCell
+                        bh.add(oList, oDict, (maxG * (map_array[1][newCell] + DistanceDiff(newCell, gCell))
+                                              - map_array[1][newCell]), newCell)
+
+        if not oList:
+            return None, None
+
+        # Show visualization if specified
+        currPath = getForwardPath(fDict, currCell, gCell)
+        if show:
+            if currCell == start:
+                plt.ion()
+                im, fig, oLine, pLine = color_maze(mLength, map=map_array, pList=currPath, old=currTrack)
+                plt.show()
+            else:
+                update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+        # Update the current track with the new path
+        for cell in currPath:
+            if cell == currCell:
+                continue
+            else:
+                if map_array[2][cell] != 2:
+                    currTrack.append(cell)
+                    currCell = cell
+                    update_status(map_array, mLength, currCell, bList)
+                else:
+                    break
+
+    # Show final visualization if specified
+    if show:
+        update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+    # Return the final path and total expense
+    return currTrack, totalExpense
+
+
+def repeatedForwardAStar(mLength, bList, start, goal, show=False):
+    # Implement Repeated Forward A* algorithm with inputs: length, start, and goal
+    totalExpense = 0
+    maxG = mLength * mLength  # Maximum possible g-value
+    currCell = start
+    gCell = goal
+    map_array = np.zeros((4, mLength, mLength))  # Map data structure with layers for various information
+    map_array[2][currCell] = 1  # Mark the current cell as visited
+    totalSteps = 0
+    currTrack = [start]  # Track of the current path
+    update_status(map_array, mLength, currCell, bList)  # Update map with obstacle information
+
+    # Main loop of the Repeated Forward A* algorithm
+    while currCell != gCell:
+        totalSteps += 1
+        map_array[1][currCell] = 0  # Set the g-value of the current cell to zero
+        map_array[0][currCell] = totalSteps  # Update the total steps taken to reach the current cell
+        map_array[1][gCell] = np.inf  # Set the g-value of the goal cell to infinity
+        map_array[0][gCell] = totalSteps  # Update the total steps taken to reach the goal
+        oList = []  # Open list for priority queue
+        oDict = dict()  # Dictionary for efficient element retrieval from the open list
+        fDict = dict()  # Dictionary to track the parent cells for constructing the path
+        bh.add(oList, oDict, DistanceDiff(currCell, gCell), currCell)  # Add the start cell to the open list
+
+        # Explore cells using A* algorithm
+        while oList and map_array[1][gCell] > oList[0]:
+            coloredCell = bh.pop(oList, oDict)  # Get the cell with the minimum g-value from the open list
+            totalExpense += 1
+
+            # Explore neighboring cells
+            for newCell in nextNeighbor(coloredCell, mLength):
+                if map_array[2][newCell] != 2:
+                    if map_array[0][newCell] < totalSteps:
+                        map_array[1][newCell] = np.inf
+                        map_array[0][newCell] = totalSteps
+
+                    if map_array[1][newCell] > map_array[1][coloredCell] + 1:
+                        map_array[1][newCell] = map_array[1][coloredCell] + 1
+                        fDict[newCell] = coloredCell
+                        bh.add(oList, oDict, (maxG * (map_array[1][newCell] + DistanceDiff(newCell, gCell))
+                                              + map_array[1][newCell]), newCell)
+
+        if not oList:
+            return None, None
+
+        # Show visualization if specified
+        currPath = getForwardPath(fDict, currCell, gCell)
+        if show:
+            if currCell == start:
+                plt.ion()
+                im, fig, oLine, pLine = color_maze(mLength, map=map_array, pList=currPath, old=currTrack)
+                plt.show()
+            else:
+                update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+        # Update the current track with the new path
+        for cell in currPath:
+            if cell == currCell:
+                continue
+            else:
+                if map_array[2][cell] != 2:
+                    currTrack.append(cell)
+                    currCell = cell
+                    update_status(map_array, mLength, currCell, bList)
+                else:
+                    break
+
+    # Show final visualization if specified
+    if show:
+        update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+    # Return the final path and total expense
+    return currTrack, totalExpense
+
+
+def repeatedForwardAStarB(mLength, bList, start, goal, show=False):
+    # Implement Repeated Forward A* algorithm with inputs: length, start, and goal
+    totalExpense = 0
+    currCell = start
+    gCell = goal
+    map_array = np.zeros((3, mLength, mLength))  # Map data structure with layers for various information
+    map_array[2][currCell] = 1  # Mark the current cell as visited
+    totalSteps = 0
+    currTrack = [start]  # Track of the current path
+    update_status(map_array, mLength, currCell, bList)  # Update map with obstacle information
+
+    # Main loop of the Repeated Forward A* algorithm
+    while currCell != gCell:
+        totalSteps += 1
+        map_array[1][currCell] = 0  # Set the g-value of the current cell to zero
+        map_array[0][currCell] = totalSteps  # Update the total steps taken to reach the current cell
+        map_array[1][gCell] = np.inf  # Set the g-value of the goal cell to infinity
+        map_array[0][gCell] = totalSteps  # Update the total steps taken to reach the goal
+        oList = []  # Open list for priority queue
+        oDict = dict()  # Dictionary for efficient element retrieval from the open list
+        fDict = dict()  # Dictionary to track the parent cells for constructing the path
+        bh.add(oList, oDict, DistanceDiff(currCell, gCell), currCell)  # Add the start cell to the open list
+
+        # Explore cells using A* algorithm
+        while len(oList) > 0 and map_array[1][gCell] > oList[0]:
+            coloredCell = bh.pop(oList, oDict)  # Get the cell with the minimum g-value from the open list
+            totalExpense += 1
+
+            # Explore neighboring cells
+            for newCell in nextNeighbor(coloredCell, mLength):
+                if map_array[2][newCell] != 2:
+                    if map_array[0][newCell] < totalSteps:
+                        map_array[1][newCell] = np.inf
+                        map_array[0][newCell] = totalSteps
+
+                    if map_array[1][newCell] > map_array[1][coloredCell] + 1:
+                        map_array[1][newCell] = map_array[1][coloredCell] + 1
+                        fDict[newCell] = coloredCell
+                        bh.add(oList, oDict, (map_array[1][newCell] + DistanceDiff(newCell, gCell)), newCell)
+
+        if not oList:
+            return None, None
+
+        # Show visualization if specified
+        currPath = getForwardPath(fDict, currCell, gCell)
+        if show:
+            if currCell == start:
+                plt.ion()
+                im, fig, oLine, pLine = color_maze(mLength, map=map_array, pList=currPath, old=currTrack)
+                plt.show()
+            else:
+                update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+        # Update the current track with the new path
+        for cell in currPath:
+            if cell == currCell:
+                continue
+            else:
+                if map_array[2][cell] != 2:
+                    currTrack.append(cell)
+                    currCell = cell
+                    update_status(map_array, mLength, currCell, bList)
+                else:
+                    break
+
+    # Show final visualization if specified
+    if show:
+        update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+    # Return the final path and total expense
+    return currTrack, totalExpense
+
+
+def repeatedBackwardAStar(mLength, bList, start, goal, show=False):
+    # Implement Repeated Backward A* algorithm with inputs: length, start, goal
+    totalExpense = 0
+    currCell = start
+    gCell = goal
+    map_array = np.zeros((3, mLength, mLength))  # Map data structure with layers for various information
+    map_array[2][currCell] = 1  # Mark the current cell as visited
+    totalSteps = 0
+    currTrack = [start]  # Track of the current path
+    update_status(map_array, mLength, currCell, bList)  # Update map with obstacle information
+
+    # Main loop of the Repeated Backward A* algorithm
+    while currCell != gCell:
+        totalSteps += 1
+        map_array[1][currCell] = np.inf  # Set the g-value of the current cell to infinity
+        map_array[0][currCell] = totalSteps  # Update the total steps taken to reach the current cell
+        map_array[1][gCell] = 0  # Set the g-value of the goal cell to zero
+        map_array[0][gCell] = totalSteps  # Update the total steps taken to reach the goal
+        oList = []  # Open list for priority queue
+        oDict = dict()  # Dictionary for efficient element retrieval from the open list
+        fDict = dict()  # Dictionary to track the parent cells for constructing the path
+        bh.add(oList, oDict, DistanceDiff(currCell, gCell), gCell)  # Add the goal cell to the open list
+
+        # Explore cells using A* algorithm
+        while oList:
+            if map_array[1][currCell] <= oList[0]:
+                break
+            totalExpense += 1
+            coloredCell = bh.pop(oList, oDict)  # Get the cell with the minimum g-value from the open list
+
+            # Explore neighboring cells
+            for newCell in nextNeighbor(coloredCell, mLength):
+                if map_array[2][newCell] != 2:
+                    if map_array[0][newCell] < totalSteps:
+                        map_array[1][newCell] = np.inf
+                        map_array[0][newCell] = totalSteps
+
+                    if map_array[1][newCell] > map_array[1][coloredCell] + 1:
+                        map_array[1][newCell] = map_array[1][coloredCell] + 1
+                        fDict[newCell] = coloredCell
+                        bh.add(oList, oDict, map_array[1][newCell] + DistanceDiff(newCell, currCell), newCell)
+
+        if not oList:
+            return None, None
+
+        # Show visualization if specified
+        if show:
+            currPath = getBackwardPath(fDict, currCell, gCell)
+            if currCell == start:
+                plt.ion()
+                im, fig, oLine, pLine = color_maze(mLength, map=map_array, pList=currPath, old=currTrack)
+                plt.show()
+            else:
+                update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+        # Update the current track with the new path
+        while currCell != gCell:
+            cell = fDict[currCell]
+            if map_array[2][cell] != 2:
+                currTrack.append(cell)
+                currCell = cell
+                update_status(map_array, mLength, currCell, bList)
+            else:
+                break
+
+    # Show final visualization if specified
+    if show:
+        update_graph(im, fig, oLine, pLine, map_array[2], currTrack, currPath)
+
+    # Return the final path and total expense
+    return currTrack, totalExpense
+
 
 
 
@@ -608,7 +700,6 @@ if __name__ == '__main__':
 	start = (1,1) 
 	goal  = (3,2) 
 	
-	#np.savetxt('maze '+str(current_maze)+'.txt',mazes[current_maze].astype(int) ,fmt='%i', delimiter=",") 
 
 	length= 5             
 	bList = [(2,3),(3,4),(3,3),(4,3),(4,4),(5,4)]  # Example given in assignment
